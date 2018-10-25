@@ -1,0 +1,5 @@
+{
+    "python.pythonPath": "~/Documents/Projects/Envs/nus/bin/python",
+    "editor.formatOnSave": true,
+    "python.linting.enabled": false,
+}
