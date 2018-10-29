@@ -102,6 +102,6 @@ if __name__ == '__main__':
 		test_file_split = sys.argv[2].split('.')
 		with open(test_file_split[0] + "_pred." + test_file_split[1], 'w') as f:
 			csv_writer = csv.writer(f, delimiter=',')
-			csv_writer.writerow(['article_id,category'])
+			csv_writer.writerow(['article_id', 'category'])
 			for pred in pred_result:
 				csv_writer.writerow(pred)
