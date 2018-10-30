@@ -28,14 +28,18 @@ class TitleFeature(Feature):
 	Feature class representing the title attribute of the data records
 	"""
 
-	def __init__(self, training_data, smoothing_factor=1.0):
+	def __init__(self, training_data, smoothing_factor=1.0, word_joins=None):
 		"""
-		A list of training data records.
+		:param training_data: A list of training data records.
 		Each record is a list consisting of article_id, title, url, publisher, hostname, timestamp, category.
-		:param data:
+		:param smoothing_factor:
+		:param word_joins: list. allowed number of words to join together to form a new word. e.g. sentence is 'what the fuck'
+		if word_joins is [1, 2], then formed vocabulary woulb be [what, the, fuck, what_the, the_fuck].
+		default to [1] is None is passed
 		"""
 		super(TitleFeature, self).__init__('Title', 1, smoothing_factor)
 
+		self.word_joins = word_joins if word_joins else [1]
 		# Hold the word count for word in each category.
 		self.category_bag_of_words = {}
 		# Hold the total word count for each category.
@@ -46,10 +50,7 @@ class TitleFeature(Feature):
 				self.category_bag_of_words[category] = {}
 				self.category_count[category] = 0
 			bag_of_words = self.category_bag_of_words[category]
-			for word in re.split(r"\W", record[1].strip().lower()):
-				word = word.strip()
-				if not word:
-					continue
+			for word in self._permutate_words(record[1].lower()):
 				if word not in bag_of_words:
 					bag_of_words[word] = 0
 				bag_of_words[word] += 1
@@ -57,16 +58,21 @@ class TitleFeature(Feature):
 		# for k, bw in self.category_bag_of_words.items():
 		# 	print 'category ', k, ' with number of different words', len(bw)
 
+	def _permutate_words(self, sentence):
+		word_split = [w for w in re.split(r"\W", sentence.lower()) if w.strip()]
+		result = []
+		for i in self.word_joins:
+			joined_words = ['_'.join(word_split[j: j+i]) for j in range(len(word_split)-i + 1)]
+			result += joined_words
+		return result
+
 	def condition_log_prob(self, test_record, category, print_ids=None):
 		need_print = test_record[0] in print_ids if print_ids else False
 		feature_value = test_record[self.feature_idx]
 		if category not in self.category_count.keys():
 			raise AttributeError('Target category {} does not exist'.format(category))
 		log_prob = 0
-		for word in re.split(r"\W", feature_value.lower()):
-			word = word.strip()
-			if not word:
-				continue
+		for word in self._permutate_words(feature_value.lower()):
 			word_count = self.category_bag_of_words[category].get(word, 0) + self.smoothing_factor
 			total_word_count = (len(self.category_bag_of_words[category]) * self.smoothing_factor + self.category_count[category])
 			log_prob += math.log(word_count * 1.0 / total_word_count)

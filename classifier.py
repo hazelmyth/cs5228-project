@@ -27,7 +27,7 @@ class NewsClassifier(object):
 		# Create two features's feature class, namely news's title and news's publisher
 		# training data, each data record is a list of article_id, title, url, publisher, hostname, timestamp, category.
 		training_data = self.read_csv(file_path)
-		self.features['title'] = TitleFeature(training_data[1:], smoothing_factor=0.01)
+		self.features['title'] = TitleFeature(training_data[1:], smoothing_factor=0.01, word_joins=[1])
 		# self.features['publisher'] = PublisherFeature(training_data)
 		# self.features['hostname'] = HostnameFeature(training_data[1:], smoothing_factor=1.0)
 
@@ -76,7 +76,7 @@ class NewsClassifier(object):
 			print '[classifier] Article', test_record[0], 'Final max_log=', max_log_prob, 'with category=', result
 		return result
 
-	def predict_dataset(self, test_dataset=None, file_path=None, print_ids=None):
+	def predict_dataset(self, test_dataset=None, file_path=None, print_ids=[]):
 		"""
 		A list of test data record or given test data file path in csv format
 		Each test data record in the form of [article_id, title, url, publisher, hostname, timestamp]
