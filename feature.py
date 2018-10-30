@@ -12,12 +12,12 @@ class Feature(object):
 		self.feature_idx = feature_idx
 		self.smoothing_factor = smoothing_factor
 
-	def condition_log_prob(self, test_record, category):
+	def condition_log_prob(self, test_record, category, print_ids=None):
 		"""
 		Returning the log conditional probability of passed test_record of current feature given certain category.
 		:param test_record: news article record in the form of a list [article_id, title, url, publisher, hostname, timestamp]
 		:param category: the class
-		:param smoothing_factor: the smoothing factor, default to 1
+		:param print_ids: the record ids that need to print
 		:return:
 		"""
 		raise NotImplementedError()
@@ -57,7 +57,8 @@ class TitleFeature(Feature):
 		# for k, bw in self.category_bag_of_words.items():
 		# 	print 'category ', k, ' with number of different words', len(bw)
 
-	def condition_log_prob(self, test_record, category):
+	def condition_log_prob(self, test_record, category, print_ids=None):
+		need_print = test_record[0] in print_ids if print_ids else False
 		feature_value = test_record[self.feature_idx]
 		if category not in self.category_count.keys():
 			raise AttributeError('Target category {} does not exist'.format(category))
@@ -69,8 +70,10 @@ class TitleFeature(Feature):
 			word_count = self.category_bag_of_words[category].get(word, 0) + self.smoothing_factor
 			total_word_count = (len(self.category_bag_of_words[category]) * self.smoothing_factor + self.category_count[category])
 			log_prob += math.log(word_count * 1.0 / total_word_count)
-			print '[title] word=', word, 'word count=', word_count, 'total word count=', total_word_count, 'log_prob=', log_prob
-		print '[title] value=', feature_value, 'log_prob=', log_prob
+			if need_print:
+				print '[title] word=', word, 'word count=', word_count, 'total word count=', total_word_count, 'log_prob=', log_prob
+		if need_print:
+			print '[title] value=', feature_value, 'log_prob=', log_prob
 		return log_prob
 
 
@@ -99,14 +102,16 @@ class PublisherFeature(Feature):
 		# for k, bw in self.category_bag_of_publishers.items():
 		# 	print 'category ', k, ' with number of different publisher', len(bw)
 
-	def condition_log_prob(self, test_record, category, smoothing_factor=1.0):
+	def condition_log_prob(self, test_record, category, print_ids=None):
+		need_print = test_record[0] in print_ids if print_ids else False
 		feature_value = test_record[self.feature_idx]
 		if category not in self.category_bag_of_publishers:
 			raise AttributeError('Target category {} does not exist'.format(category))
 		category_hostname_count = self.category_bag_of_publishers[category].get(feature_value.strip().lower(), 0) + self.smoothing_factor
 		category_total_count = sum(self.category_bag_of_publishers[category].values()) + len(self.category_bag_of_publishers[category]) * self.smoothing_factor
 		log_prob = math.log(category_hostname_count * 1.0 / category_total_count)
-		# print '[publisher] value=', feature_value, 'count=', category_hostname_count, 'total=', category_total_count, 'log_prob=', log_prob
+		if need_print:
+			print '[publisher] value=', feature_value, 'count=', category_hostname_count, 'total=', category_total_count, 'log_prob=', log_prob
 		return log_prob
 
 
@@ -135,12 +140,14 @@ class HostnameFeature(Feature):
 		# for k, bw in self.category_bag_of_hostname.items():
 		# 	print 'category ', k, ' with number of different hostname', len(bw)
 
-	def condition_log_prob(self, test_record, category):
+	def condition_log_prob(self, test_record, category, print_ids=None):
+		need_print = test_record[0] in print_ids if print_ids else False
 		feature_value = test_record[self.feature_idx]
 		if category not in self.category_bag_of_hostname:
 			raise AttributeError('Target category {} does not exist'.format(category))
 		category_hostname_count = self.category_bag_of_hostname[category].get(feature_value.strip().lower(), 0) + self.smoothing_factor
 		category_total_count = sum(self.category_bag_of_hostname[category].values()) + self.smoothing_factor * len(self.category_bag_of_hostname[category])
 		log_prob = math.log(category_hostname_count * 1.0 / category_total_count)
-		print '[hostname] value=', feature_value, 'count=', category_hostname_count, 'total=', category_total_count, 'log_prob=', log_prob
+		if need_print:
+			print '[hostname] value=', feature_value, 'count=', category_hostname_count, 'total=', category_total_count, 'log_prob=', log_prob
 		return log_prob
