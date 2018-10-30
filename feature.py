@@ -7,15 +7,17 @@ class Feature(object):
 	Feature class to represent one feature of the data set given the feature index.
 	"""
 
-	def __init__(self, name, feature_idx):
+	def __init__(self, name, feature_idx, smoothing_factor=1.0):
 		self.name = name
 		self.feature_idx = feature_idx
+		self.smoothing_factor = smoothing_factor
 
 	def condition_log_prob(self, test_record, category):
 		"""
 		Returning the log conditional probability of passed test_record of current feature given certain category.
 		:param test_record: news article record in the form of a list [article_id, title, url, publisher, hostname, timestamp]
 		:param category: the class
+		:param smoothing_factor: the smoothing factor, default to 1
 		:return:
 		"""
 		raise NotImplementedError()
@@ -26,13 +28,13 @@ class TitleFeature(Feature):
 	Feature class representing the title attribute of the data records
 	"""
 
-	def __init__(self, training_data):
+	def __init__(self, training_data, smoothing_factor=1.0):
 		"""
 		A list of training data records.
 		Each record is a list consisting of article_id, title, url, publisher, hostname, timestamp, category.
 		:param data:
 		"""
-		super(TitleFeature, self).__init__('Title', 1)
+		super(TitleFeature, self).__init__('Title', 1, smoothing_factor)
 
 		# Hold the word count for word in each category.
 		self.category_bag_of_words = {}
@@ -64,11 +66,11 @@ class TitleFeature(Feature):
 			word = word.strip()
 			if not word:
 				continue
-			word_count = self.category_bag_of_words[category].get(word, 0) + 1
-			total_word_count = (len(self.category_count) + self.category_count[category]) # With Laplace estimation
+			word_count = self.category_bag_of_words[category].get(word, 0) + self.smoothing_factor
+			total_word_count = (len(self.category_bag_of_words[category]) * self.smoothing_factor + self.category_count[category])
 			log_prob += math.log(word_count * 1.0 / total_word_count)
-			# print '[title] word=', word, 'word count=', word_count, 'total word count=', total_word_count, 'log_prob=', log_prob
-		# print '[title] value=', feature_value, 'log_prob=', log_prob
+			print '[title] word=', word, 'word count=', word_count, 'total word count=', total_word_count, 'log_prob=', log_prob
+		print '[title] value=', feature_value, 'log_prob=', log_prob
 		return log_prob
 
 
@@ -77,13 +79,13 @@ class PublisherFeature(Feature):
 	Feature class representing the news publisher attribute of the data records
 	"""
 
-	def __init__(self, training_data):
+	def __init__(self, training_data, smoothing_factor=1.0):
 		"""
 		A list of training data records.
 		Each record is a list consisting of article_id, title, url, publisher, hostname, timestamp, category.
 		:param data:
 		"""
-		super(PublisherFeature, self).__init__('Publisher', 3)
+		super(PublisherFeature, self).__init__('Publisher', 3, smoothing_factor)
 		self.category_bag_of_publishers = {}
 		for record in training_data:
 			category = record[6]
@@ -97,13 +99,13 @@ class PublisherFeature(Feature):
 		# for k, bw in self.category_bag_of_publishers.items():
 		# 	print 'category ', k, ' with number of different publisher', len(bw)
 
-	def condition_log_prob(self, test_record, category):
+	def condition_log_prob(self, test_record, category, smoothing_factor=1.0):
 		feature_value = test_record[self.feature_idx]
 		if category not in self.category_bag_of_publishers:
 			raise AttributeError('Target category {} does not exist'.format(category))
-		category_hostname_count = self.category_bag_of_publishers[category].get(feature_value.strip().lower(), 0) + 1
-		category_total_count = sum(self.category_bag_of_publishers[category].values())
-		log_prob = math.log(category_hostname_count * 1.0 / (len(self.category_bag_of_publishers) + category_total_count))
+		category_hostname_count = self.category_bag_of_publishers[category].get(feature_value.strip().lower(), 0) + self.smoothing_factor
+		category_total_count = sum(self.category_bag_of_publishers[category].values()) + len(self.category_bag_of_publishers[category]) * self.smoothing_factor
+		log_prob = math.log(category_hostname_count * 1.0 / category_total_count)
 		# print '[publisher] value=', feature_value, 'count=', category_hostname_count, 'total=', category_total_count, 'log_prob=', log_prob
 		return log_prob
 
@@ -113,13 +115,13 @@ class HostnameFeature(Feature):
 	Feature class representing the news hostname attribute of the data records
 	"""
 
-	def __init__(self, training_data):
+	def __init__(self, training_data, smoothing_factor=1.0):
 		"""
 		A list of training data records.
 		Each record is a list consisting of article_id, title, url, publisher, hostname, timestamp, category.
 		:param data:
 		"""
-		super(HostnameFeature, self).__init__('Hostname', 4)
+		super(HostnameFeature, self).__init__('Hostname', 4, smoothing_factor)
 		self.category_bag_of_hostname = {}
 		for record in training_data:
 			category = record[6]
@@ -137,8 +139,8 @@ class HostnameFeature(Feature):
 		feature_value = test_record[self.feature_idx]
 		if category not in self.category_bag_of_hostname:
 			raise AttributeError('Target category {} does not exist'.format(category))
-		category_hostname_count = self.category_bag_of_hostname[category].get(feature_value.strip().lower(), 0) + 1
-		category_total_count = sum(self.category_bag_of_hostname[category].values())
-		log_prob = math.log(category_hostname_count * 1.0 / (len(self.category_bag_of_hostname) + category_total_count))
-		# print '[hostname] value=', feature_value, 'count=', category_hostname_count, 'total=', category_total_count, 'log_prob=', log_prob
+		category_hostname_count = self.category_bag_of_hostname[category].get(feature_value.strip().lower(), 0) + self.smoothing_factor
+		category_total_count = sum(self.category_bag_of_hostname[category].values()) + self.smoothing_factor * len(self.category_bag_of_hostname[category])
+		log_prob = math.log(category_hostname_count * 1.0 / category_total_count)
+		print '[hostname] value=', feature_value, 'count=', category_hostname_count, 'total=', category_total_count, 'log_prob=', log_prob
 		return log_prob
