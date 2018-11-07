@@ -45,7 +45,7 @@ class TitleFeature(Feature):
         default to [1] is None is passed
         """
         super(TitleFeature, self).__init__('Title', 1, smoothing_factor)
-        #sno = nltk.stem.SnowballStemmer('english')
+
         self.word_joins = word_joins if word_joins else [1]
         # Hold the word count for word in each category.
         self.category_bag_of_words = {}
@@ -62,7 +62,6 @@ class TitleFeature(Feature):
             for word in self._permutate_words(record[1].lower()):
                 if (str(word) not in exclude_list): #and (str(word) not in self.stop_words)
                     if (word not in bag_of_words):
-                        #word = sno.stem(word)
                         bag_of_words[word] = 0
                         self.category_count[category] += 1 # dont count duplicate word in the same record, improve by 0.5%
                     bag_of_words[word] += 1
@@ -71,11 +70,6 @@ class TitleFeature(Feature):
         #     print 'category ', k, ' with number of different words', len(bw)
 
     def _permutate_words(self, sentence):
-        # the next 2 lines => 937/6027
-# =============================================================================
-#         sentence = re.sub('[^a-z\s]+','',sentence,flags=re.IGNORECASE) #every char except alphabets is replaced
-#         sentence = re.sub('(\s+)',' ',sentence) #multiple spaces are replaced by single space
-# =============================================================================
         word_split = [w for w in re.split(r"\W", sentence.lower()) if w.strip()]
         result = []
         for i in self.word_joins:

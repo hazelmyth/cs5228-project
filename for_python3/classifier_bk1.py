@@ -1,11 +1,9 @@
 import sys
 import csv
 import math
-import numpy as np
 from collections import Counter
-from sklearn.model_selection import train_test_split as tts
 
-from feature_bk2 import (
+from feature import (
     TitleFeature,
     PublisherFeature,
     HostnameFeature,
@@ -22,37 +20,29 @@ class NewsClassifier(object):
         self.features = {}
         self.categories = {}
 
-    def learn(self, file_path,test_size ,seed):
+    def learn(self, file_path):
         """
         Learn traning data give the training data path.
         """
         # Create two features's feature class, namely news's title and news's publisher
         # training data, each data record is a list of article_id, title, url, publisher, hostname, timestamp, category.
         training_data = self.read_csv(file_path)
-            
-        X_train, X_test, y_train, y_test = tts(training_data[:], np.zeros((6028,7)), test_size=test_size, random_state=seed)
-
-        #print('X_train type is ',type(X_train), len(X_train), X_train[1])
-        #print('y_train shape is ',np.shape(y_train))
-        
-        self.features['title'] = TitleFeature(X_train[1:], smoothing_factor=0.01, word_joins=[1])
+        self.features['title'] = TitleFeature(training_data[1:], smoothing_factor=0.01, word_joins=[1])
         # self.features['publisher'] = PublisherFeature(training_data)
         # self.features['hostname'] = HostnameFeature(training_data[1:], smoothing_factor=1.0)
 
         self.categories = Counter([record[6] for record in training_data[1:]])
 
         # Write predict of training data to see the difference
-        training_pred = self.predict_dataset(X_train[:], print_ids=[])
+        training_pred = self.predict_dataset(training_data[:], print_ids=[])
         compare = [['article_id', 'category', 'pred']]
         diff_count = 0
-        for train, pred in zip(X_train[1:], training_pred):
+        for train, pred in zip(training_data[1:], training_pred):
             if train[6] != pred[1]:
                 diff_count += 1
             compare.append([train[0], train[6], pred[1]])
-        X_err = diff_count/len(training_pred)
-        #print ('Total number of difference is', diff_count, 'out of', len(training_pred), 'records','error rate of X_train is ',diff_count/len(training_pred))
-        return X_err
-        #self.write_csv('./data/diff.csv', compare)
+        print ('Total number of difference is', diff_count, 'out of', len(training_pred), 'records')
+        self.write_csv('./data/diff.csv', compare)
 
     # for cat in self.categories:
     #     print 'current cat ', cat + ' having record ', self.categories[cat]
@@ -118,7 +108,7 @@ class NewsClassifier(object):
 
     @classmethod
     def write_csv(cls, file_path, dataset):
-        with open(file_path, 'w', newline='', encoding='utf-8') as f: # disable the stupid newline in py3 csv
+        with open(file_path, 'w', newline='') as f:
             csv_writer = csv.writer(f, delimiter=',')
             for row in dataset:
                 csv_writer.writerow(row)
@@ -129,20 +119,7 @@ if __name__ == '__main__':
         print ('Please specify the training data file path')
 
     news_classifier = NewsClassifier()
-    min_X_err = 1
-    min_test_size = None
-    min_X_err_seed = None
-    for test_size in np.arange(0,0.3,0.05):
-        for seed in range(1000):
-            X_err = news_classifier.learn(sys.argv[1],test_size, seed)
-            if X_err < min_X_err:
-                min_X_err = X_err
-                min_test_size = test_size
-                min_X_err_seed = seed
-                print('test size is ',test_size, 'seed is ',seed)
-            
-    min_X_err = news_classifier.learn(sys.argv[1],min_test_size,min_X_err_seed)
-    print(min_X_err_seed, min_test_size, min_X_err)
+    news_classifier.learn(sys.argv[1])
 
     if len(sys.argv) == 3:
         pred_result = news_classifier.predict_dataset(file_path=sys.argv[2])
