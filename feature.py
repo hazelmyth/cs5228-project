@@ -2,6 +2,7 @@ import re
 import math
 
 
+
 class Feature(object):
 	"""
 	Feature class to represent one feature of the data set given the feature index.
